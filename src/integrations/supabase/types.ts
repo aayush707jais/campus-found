@@ -129,7 +129,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      delete_matched_items: {
+        Args: { p_claimed_item_id: string; p_matched_item_ids: string[] }
+        Returns: undefined
+      }
     }
     Enums: {
       claim_status: "pending" | "approved" | "rejected"

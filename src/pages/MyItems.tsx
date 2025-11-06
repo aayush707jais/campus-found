@@ -268,13 +268,13 @@ const MyItems = () => {
 
       if (claimError) throw claimError;
 
-      // Delete the claimed item
-      await supabase.from("items").delete().eq("id", claimedItemId);
+      // Use the database function to delete both items (bypasses RLS)
+      const { error: deleteError } = await supabase.rpc("delete_matched_items", {
+        p_claimed_item_id: claimedItemId,
+        p_matched_item_ids: matchedItemIds,
+      });
 
-      // Delete matched items
-      if (matchedItemIds.length > 0) {
-        await supabase.from("items").delete().in("id", matchedItemIds);
-      }
+      if (deleteError) throw deleteError;
 
       const totalDeleted = matchedItemIds.length + 1;
       toast({

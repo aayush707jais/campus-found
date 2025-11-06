@@ -142,15 +142,25 @@ const Index = () => {
                 </div>
               </div>
               
-              <div className="absolute -top-6 -right-6 bg-card border rounded-2xl p-4 shadow-lg backdrop-blur-sm animate-fade-in hover:scale-105 transition-transform" style={{ animationDelay: '0.6s' }}>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-accent/10 rounded-lg">
-                    <MapPin className="h-6 w-6 text-accent" />
+              <div className="absolute -top-6 -right-6 bg-card border rounded-2xl p-6 shadow-lg backdrop-blur-sm animate-fade-in" style={{ animationDelay: '0.6s' }}>
+                <div className="relative w-32 h-32">
+                  {/* Sad emoji - shows at start */}
+                  <div className="absolute inset-0 flex items-center justify-center animate-[lost-item-sequence_4s_ease-in-out_infinite]">
+                    <span className="text-6xl">😢</span>
                   </div>
-                  <div>
-                    <div className="font-semibold">Live Updates</div>
-                    <div className="text-sm text-muted-foreground">Real-time notifications</div>
+                  
+                  {/* Gift box - appears in middle */}
+                  <div className="absolute inset-0 flex items-center justify-center animate-[gift-appears_4s_ease-in-out_infinite]">
+                    <span className="text-6xl">🎁</span>
                   </div>
+                  
+                  {/* Happy emoji - shows at end */}
+                  <div className="absolute inset-0 flex items-center justify-center animate-[found-item-happy_4s_ease-in-out_infinite]">
+                    <span className="text-6xl">😊</span>
+                  </div>
+                </div>
+                <div className="text-center mt-2">
+                  <div className="font-semibold text-sm">Lost & Found!</div>
                 </div>
               </div>
             </div>

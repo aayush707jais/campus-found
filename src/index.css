@@ -112,47 +112,6 @@ All colors MUST be HSL.
     }
   }
 
-  @keyframes lost-item-sequence {
-    0%, 30% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    35%, 100% {
-      opacity: 0;
-      transform: scale(0.8);
-    }
-  }
-
-  @keyframes gift-appears {
-    0%, 30% {
-      opacity: 0;
-      transform: scale(0) rotate(-180deg);
-    }
-    40%, 60% {
-      opacity: 1;
-      transform: scale(1.2) rotate(0deg);
-    }
-    65%, 100% {
-      opacity: 0;
-      transform: scale(0.8) rotate(180deg);
-    }
-  }
-
-  @keyframes found-item-happy {
-    0%, 65% {
-      opacity: 0;
-      transform: scale(0.8);
-    }
-    70%, 95% {
-      opacity: 1;
-      transform: scale(1.1);
-    }
-    100% {
-      opacity: 0;
-      transform: scale(0.8);
-    }
-  }
-
   .animate-fade-in {
     animation: fade-in 0.6s ease-out forwards;
   }

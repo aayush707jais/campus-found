@@ -3,6 +3,7 @@ import { Package, Search, PlusCircle, LogOut, User } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,6 +59,7 @@ export const Navbar = ({ user }: NavbarProps) => {
                   Post Item
                 </Link>
               </Button>
+              <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
@@ -82,9 +84,12 @@ export const Navbar = ({ user }: NavbarProps) => {
               </DropdownMenu>
             </>
           ) : (
-            <Button variant="default" size="sm" asChild>
-              <Link to="/auth">Sign In</Link>
-            </Button>
+            <>
+              <ThemeToggle />
+              <Button variant="default" size="sm" asChild>
+                <Link to="/auth">Sign In</Link>
+              </Button>
+            </>
           )}
         </div>
       </div>

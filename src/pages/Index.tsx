@@ -103,15 +103,26 @@ const Index = () => {
             animationDelay: '0.2s'
           }}>
               <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-3xl blur-3xl animate-pulse" />
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl hover:scale-105 transition-transform duration-500">
-                
-                
+              
+              {/* Emoji Animation */}
+              <div className="relative flex items-center justify-center min-h-[400px]">
+                <div className="relative w-48 h-48 bg-card/50 backdrop-blur-sm rounded-3xl border border-primary/20 shadow-2xl flex items-center justify-center">
+                  {/* Sad emoji - shows at start */}
+                  <div className="absolute inset-0 flex items-center justify-center animate-[lost-item-sad_6s_ease-in-out_infinite]">
+                    <span className="text-8xl">😢</span>
+                  </div>
+
+                  {/* Gift box - appears in middle */}
+                  <div className="absolute inset-0 flex items-center justify-center animate-[gift-appears_6s_ease-in-out_infinite]">
+                    <span className="text-8xl">🎁</span>
+                  </div>
+
+                  {/* Happy emoji - shows at end */}
+                  <div className="absolute inset-0 flex items-center justify-center animate-[found-item-happy_6s_ease-in-out_infinite]">
+                    <span className="text-8xl">😊</span>
+                  </div>
+                </div>
               </div>
-              
-              {/* Floating cards */}
-              
-              
-              
             </div>
           </div>
         </div>

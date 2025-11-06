@@ -128,6 +128,10 @@ const MyItems = () => {
 
   const handleClaimResponse = async (claimId: string, newStatus: "approved" | "rejected") => {
     try {
+      // Get the claim details to find the item
+      const claim = claims.find(c => c.id === claimId);
+      if (!claim) throw new Error("Claim not found");
+
       const { error } = await supabase
         .from("claims")
         .update({ status: newStatus })
@@ -135,14 +139,55 @@ const MyItems = () => {
 
       if (error) throw error;
 
-      toast({
-        title: `Claim ${newStatus}`,
-        description: `You have ${newStatus} this claim.`,
-      });
+      // If approved, match and delete items
+      if (newStatus === "approved") {
+        const claimedItem = claim.items;
+        const oppositeType = claimedItem.type === "lost" ? "found" : "lost";
 
-      // Refresh claims
+        // Find matching items (opposite type, same category, similar location)
+        const { data: matchingItems } = await supabase
+          .from("items")
+          .select("*")
+          .eq("type", oppositeType)
+          .eq("category", claimedItem.category)
+          .eq("status", "active")
+          .ilike("location", `%${claimedItem.location.split(",")[0].trim()}%`);
+
+        // Delete the claimed item
+        await supabase
+          .from("items")
+          .delete()
+          .eq("id", claimedItem.id);
+
+        // Delete matching items
+        if (matchingItems && matchingItems.length > 0) {
+          const matchingIds = matchingItems.map(item => item.id);
+          await supabase
+            .from("items")
+            .delete()
+            .in("id", matchingIds);
+
+          toast({
+            title: "Items matched and removed",
+            description: `Removed ${matchingItems.length + 1} matched items from the system.`,
+          });
+        } else {
+          toast({
+            title: "Claim approved",
+            description: "The claimed item has been removed.",
+          });
+        }
+      } else {
+        toast({
+          title: `Claim ${newStatus}`,
+          description: `You have ${newStatus} this claim.`,
+        });
+      }
+
+      // Refresh data
       if (user) {
         fetchClaimsOnMyItems(user.id);
+        fetchMyItems(user.id);
       }
     } catch (error: any) {
       toast({

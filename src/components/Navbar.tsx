@@ -35,11 +35,11 @@ export const Navbar = ({ user }: NavbarProps) => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl">
+        <Link to="/" className="flex items-center gap-2 font-bold text-xl hover:opacity-80 transition-opacity">
           <Package className="h-6 w-6 text-primary" />
-          <span className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+          <span className="text-foreground">
             Campus Found
           </span>
         </Link>

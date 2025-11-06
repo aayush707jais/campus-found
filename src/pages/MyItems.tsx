@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, MapPin, Package, MessageSquare, CheckCircle, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MatchConfirmDialog } from "@/components/MatchConfirmDialog";
 
 interface Item {
   id: string;
@@ -41,6 +42,9 @@ const MyItems = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(true);
+  const [matchDialogOpen, setMatchDialogOpen] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState<{ claimId: string; item: any } | null>(null);
+  const [potentialMatches, setPotentialMatches] = useState<any[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -126,68 +130,107 @@ const MyItems = () => {
     }
   };
 
+  const calculateMatchScore = (item1: any, item2: any): number => {
+    let score = 0;
+
+    // Category match (40 points)
+    if (item1.category.toLowerCase() === item2.category.toLowerCase()) {
+      score += 40;
+    }
+
+    // Location similarity (30 points)
+    const loc1 = item1.location.toLowerCase();
+    const loc2 = item2.location.toLowerCase();
+    const loc1Words = loc1.split(/[\s,]+/);
+    const loc2Words = loc2.split(/[\s,]+/);
+    const commonWords = loc1Words.filter(word => loc2Words.includes(word));
+    if (commonWords.length > 0) {
+      score += Math.min(30, commonWords.length * 10);
+    }
+
+    // Date proximity (15 points) - within 7 days
+    const date1 = new Date(item1.date).getTime();
+    const date2 = new Date(item2.date).getTime();
+    const daysDiff = Math.abs(date1 - date2) / (1000 * 60 * 60 * 24);
+    if (daysDiff <= 7) {
+      score += Math.max(0, 15 - daysDiff * 2);
+    }
+
+    // Title/Description similarity (15 points)
+    const title1 = item1.title.toLowerCase();
+    const title2 = item2.title.toLowerCase();
+    const desc1 = item1.description.toLowerCase();
+    const desc2 = item2.description.toLowerCase();
+    
+    const titleWords1 = title1.split(/\s+/);
+    const titleWords2 = title2.split(/\s+/);
+    const descWords1 = desc1.split(/\s+/);
+    const descWords2 = desc2.split(/\s+/);
+    
+    const commonTitleWords = titleWords1.filter(word => 
+      word.length > 3 && titleWords2.includes(word)
+    );
+    const commonDescWords = descWords1.filter(word => 
+      word.length > 3 && descWords2.includes(word)
+    );
+    
+    score += Math.min(15, (commonTitleWords.length + commonDescWords.length) * 3);
+
+    return score;
+  };
+
+  const findPotentialMatches = (claimedItem: any, userItems: Item[]) => {
+    const oppositeType = claimedItem.type === "lost" ? "found" : "lost";
+    
+    const matches = userItems
+      .filter(item => item.type === oppositeType && item.status === "active")
+      .map(item => ({
+        ...item,
+        matchScore: calculateMatchScore(claimedItem, item)
+      }))
+      .filter(item => item.matchScore >= 40) // Only show matches with 40% or higher
+      .sort((a, b) => b.matchScore - a.matchScore);
+
+    return matches;
+  };
+
   const handleClaimResponse = async (claimId: string, newStatus: "approved" | "rejected") => {
     try {
-      // Get the claim details to find the item
       const claim = claims.find(c => c.id === claimId);
       if (!claim) throw new Error("Claim not found");
 
-      const { error } = await supabase
-        .from("claims")
-        .update({ status: newStatus })
-        .eq("id", claimId);
+      if (newStatus === "rejected") {
+        // Just reject without matching
+        const { error } = await supabase
+          .from("claims")
+          .update({ status: newStatus })
+          .eq("id", claimId);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // If approved, match and delete items
-      if (newStatus === "approved") {
-        const claimedItem = claim.items;
-        const oppositeType = claimedItem.type === "lost" ? "found" : "lost";
-
-        // Find matching items (opposite type, same category, similar location)
-        const { data: matchingItems } = await supabase
-          .from("items")
-          .select("*")
-          .eq("type", oppositeType)
-          .eq("category", claimedItem.category)
-          .eq("status", "active")
-          .ilike("location", `%${claimedItem.location.split(",")[0].trim()}%`);
-
-        // Delete the claimed item
-        await supabase
-          .from("items")
-          .delete()
-          .eq("id", claimedItem.id);
-
-        // Delete matching items
-        if (matchingItems && matchingItems.length > 0) {
-          const matchingIds = matchingItems.map(item => item.id);
-          await supabase
-            .from("items")
-            .delete()
-            .in("id", matchingIds);
-
-          toast({
-            title: "Items matched and removed",
-            description: `Removed ${matchingItems.length + 1} matched items from the system.`,
-          });
-        } else {
-          toast({
-            title: "Claim approved",
-            description: "The claimed item has been removed.",
-          });
-        }
-      } else {
         toast({
-          title: `Claim ${newStatus}`,
-          description: `You have ${newStatus} this claim.`,
+          title: "Claim rejected",
+          description: "You have rejected this claim.",
         });
+
+        if (user) {
+          fetchClaimsOnMyItems(user.id);
+        }
+        return;
       }
 
-      // Refresh data
-      if (user) {
-        fetchClaimsOnMyItems(user.id);
-        fetchMyItems(user.id);
+      // For approval, check for potential matches
+      const claimedItem = claim.items;
+      const matches = findPotentialMatches(claimedItem, items);
+
+      if (matches.length > 0) {
+        // Show match confirmation dialog
+        setPendingApproval({ claimId, item: claimedItem });
+        setPotentialMatches(matches);
+        setMatchDialogOpen(true);
+      } else {
+        // No matches found, proceed with approval
+        await approveClaimAndDelete(claimId, claimedItem.id, []);
       }
     } catch (error: any) {
       toast({
@@ -196,6 +239,73 @@ const MyItems = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const approveClaimAndDelete = async (
+    claimId: string,
+    claimedItemId: string,
+    matchedItemIds: string[]
+  ) => {
+    try {
+      // Update claim status
+      const { error: claimError } = await supabase
+        .from("claims")
+        .update({ status: "approved" })
+        .eq("id", claimId);
+
+      if (claimError) throw claimError;
+
+      // Delete the claimed item
+      await supabase.from("items").delete().eq("id", claimedItemId);
+
+      // Delete matched items
+      if (matchedItemIds.length > 0) {
+        await supabase.from("items").delete().in("id", matchedItemIds);
+      }
+
+      const totalDeleted = matchedItemIds.length + 1;
+      toast({
+        title: "Claim approved!",
+        description: `Removed ${totalDeleted} matched item${totalDeleted > 1 ? "s" : ""} from the system.`,
+      });
+
+      // Refresh data
+      if (user) {
+        fetchClaimsOnMyItems(user.id);
+        fetchMyItems(user.id);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error processing approval",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMatchConfirm = async (selectedMatchIds: string[]) => {
+    if (!pendingApproval) return;
+
+    await approveClaimAndDelete(
+      pendingApproval.claimId,
+      pendingApproval.item.id,
+      selectedMatchIds
+    );
+
+    setMatchDialogOpen(false);
+    setPendingApproval(null);
+    setPotentialMatches([]);
+  };
+
+  const handleMatchCancel = async () => {
+    if (!pendingApproval) return;
+
+    // Approve without deleting matched items
+    await approveClaimAndDelete(pendingApproval.claimId, pendingApproval.item.id, []);
+
+    setMatchDialogOpen(false);
+    setPendingApproval(null);
+    setPotentialMatches([]);
   };
 
   const handleDeleteItem = async (itemId: string) => {
@@ -248,6 +358,15 @@ const MyItems = () => {
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
       
+      <MatchConfirmDialog
+        open={matchDialogOpen}
+        onOpenChange={setMatchDialogOpen}
+        claimedItem={pendingApproval?.item}
+        potentialMatches={potentialMatches}
+        onConfirm={handleMatchConfirm}
+        onCancel={handleMatchCancel}
+      />
+
       <div className="container py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-2">My Items</h1>

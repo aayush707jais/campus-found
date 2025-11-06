@@ -39,7 +39,7 @@ const Index = () => {
         }} />
         </div>
 
-        <div className="container relative md:py-40 my-0 py-[30px]">
+        <div className="container relative md:py-40 my-0 py-[50px]">
           <div className="grid gap-16 lg:grid-cols-2 items-center">
             <div className="space-y-8 animate-fade-in">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/20 backdrop-blur-sm hover:scale-105 transition-transform duration-300">

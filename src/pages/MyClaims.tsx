@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Clock, MapPin, MessageSquare } from "lucide-react";
+import { Clock, MapPin, MessageSquare, CheckCircle } from "lucide-react";
+import { MatchConfirmDialog } from "@/components/MatchConfirmDialog";
 
 interface Item {
   id: string;
@@ -31,7 +32,11 @@ interface Claim {
 const MyClaims = () => {
   const [user, setUser] = useState<any>(null);
   const [claims, setClaims] = useState<Claim[]>([]);
+  const [myItems, setMyItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [matchDialogOpen, setMatchDialogOpen] = useState(false);
+  const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
+  const [potentialMatches, setPotentialMatches] = useState<any[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -47,6 +52,7 @@ const MyClaims = () => {
     }
     setUser(session.user);
     fetchMyClaims(session.user.id);
+    fetchMyItems(session.user.id);
   };
 
   const fetchMyClaims = async (userId: string) => {
@@ -73,6 +79,148 @@ const MyClaims = () => {
     }
   };
 
+  const fetchMyItems = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("items")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setMyItems(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Error loading your items",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const calculateMatchScore = (item1: any, item2: any): number => {
+    let score = 0;
+
+    // Category match (40 points)
+    if (item1.category.toLowerCase() === item2.category.toLowerCase()) {
+      score += 40;
+    }
+
+    // Location similarity (30 points)
+    const loc1 = item1.location.toLowerCase();
+    const loc2 = item2.location.toLowerCase();
+    const loc1Words = loc1.split(/[\s,]+/);
+    const loc2Words = loc2.split(/[\s,]+/);
+    const commonWords = loc1Words.filter(word => loc2Words.includes(word));
+    if (commonWords.length > 0) {
+      score += Math.min(30, commonWords.length * 10);
+    }
+
+    // Date proximity (15 points) - within 7 days
+    const date1 = new Date(item1.date).getTime();
+    const date2 = new Date(item2.date).getTime();
+    const daysDiff = Math.abs(date1 - date2) / (1000 * 60 * 60 * 24);
+    if (daysDiff <= 7) {
+      score += Math.max(0, 15 - daysDiff * 2);
+    }
+
+    // Title/Description similarity (15 points)
+    const title1 = item1.title.toLowerCase();
+    const title2 = item2.title.toLowerCase();
+    const desc1 = item1.description.toLowerCase();
+    const desc2 = item2.description.toLowerCase();
+    
+    const titleWords1 = title1.split(/\s+/);
+    const titleWords2 = title2.split(/\s+/);
+    const descWords1 = desc1.split(/\s+/);
+    const descWords2 = desc2.split(/\s+/);
+    
+    const commonTitleWords = titleWords1.filter(word => 
+      word.length > 3 && titleWords2.includes(word)
+    );
+    const commonDescWords = descWords1.filter(word => 
+      word.length > 3 && descWords2.includes(word)
+    );
+    
+    score += Math.min(15, (commonTitleWords.length + commonDescWords.length) * 3);
+
+    return score;
+  };
+
+  const findPotentialMatches = (approvedItem: any, userItems: Item[]) => {
+    const oppositeType = approvedItem.type === "lost" ? "found" : "lost";
+    
+    const matches = userItems
+      .filter(item => item.type === oppositeType)
+      .map(item => ({
+        ...item,
+        matchScore: calculateMatchScore(approvedItem, item)
+      }))
+      .filter(item => item.matchScore >= 40)
+      .sort((a, b) => b.matchScore - a.matchScore);
+
+    return matches;
+  };
+
+  const handleConfirmMatch = (claim: Claim) => {
+    const matches = findPotentialMatches(claim.items, myItems);
+    
+    if (matches.length > 0) {
+      setSelectedClaim(claim);
+      setPotentialMatches(matches);
+      setMatchDialogOpen(true);
+    } else {
+      toast({
+        title: "No matches found",
+        description: "We couldn't find any matching items in your posts.",
+      });
+    }
+  };
+
+  const handleMatchConfirm = async (selectedMatchIds: string[]) => {
+    if (!selectedClaim) return;
+
+    try {
+      // Delete the approved claim's item and the user's matching items
+      const itemsToDelete = [selectedClaim.items.id, ...selectedMatchIds];
+      
+      const { error } = await supabase
+        .from("items")
+        .delete()
+        .in("id", itemsToDelete);
+
+      if (error) throw error;
+
+      toast({
+        title: "Items matched and removed!",
+        description: `Successfully removed ${itemsToDelete.length} matched item${itemsToDelete.length > 1 ? "s" : ""}.`,
+      });
+
+      // Refresh data
+      if (user) {
+        fetchMyClaims(user.id);
+        fetchMyItems(user.id);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error removing items",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setMatchDialogOpen(false);
+      setSelectedClaim(null);
+      setPotentialMatches([]);
+    }
+  };
+
+  const handleMatchCancel = () => {
+    setMatchDialogOpen(false);
+    setSelectedClaim(null);
+    setPotentialMatches([]);
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
@@ -95,6 +243,15 @@ const MyClaims = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
+      
+      <MatchConfirmDialog
+        open={matchDialogOpen}
+        onOpenChange={setMatchDialogOpen}
+        claimedItem={selectedClaim?.items}
+        potentialMatches={potentialMatches}
+        onConfirm={handleMatchConfirm}
+        onCancel={handleMatchCancel}
+      />
       
       <div className="container py-8">
         <div className="mb-8">
@@ -166,6 +323,21 @@ const MyClaims = () => {
                         <div className="p-3 bg-muted rounded-lg mt-3">
                           <p className="text-sm font-medium mb-1">Your Message:</p>
                           <p className="text-sm text-muted-foreground">{claim.message}</p>
+                        </div>
+                      )}
+                      {claim.status === "approved" && (
+                        <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg mt-3">
+                          <p className="text-sm font-medium text-primary mb-2">
+                            ✓ Your claim was approved! Does this match any of your posted items?
+                          </p>
+                          <Button
+                            size="sm"
+                            onClick={() => handleConfirmMatch(claim)}
+                            className="w-full"
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Check for Matches & Remove
+                          </Button>
                         </div>
                       )}
                       <div className="pt-2">

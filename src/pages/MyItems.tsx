@@ -217,7 +217,17 @@ const MyItems = () => {
 
       // For approval, automatically find and delete matches
       const claimedItem = claim.items;
-      const matches = findPotentialMatches(claimedItem, items);
+      
+      // Fetch claimant's items to find matches
+      const { data: claimantItems, error: itemsError } = await supabase
+        .from("items")
+        .select("*")
+        .eq("user_id", claim.claimant_id)
+        .eq("status", "active");
+
+      if (itemsError) throw itemsError;
+
+      const matches = findPotentialMatches(claimedItem, claimantItems || []);
       const matchedIds = matches.map(m => m.id);
 
       // Automatically approve and delete all matched items

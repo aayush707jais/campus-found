@@ -4,34 +4,37 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Package, Search, Shield, Zap, MapPin, Clock, CheckCircle2, ArrowRight } from "lucide-react";
 import heroBanner from "@/assets/hero-banner.jpg";
-
 const Index = () => {
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
-
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: {
+          session
+        }
+      } = await supabase.auth.getSession();
       setUser(session?.user || null);
     };
-
     checkAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: {
+        subscription
+      }
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
     });
-
     return () => subscription.unsubscribe();
   }, []);
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{
+          animationDelay: '1s'
+        }} />
         </div>
 
         <div className="container relative py-24 md:py-40">
@@ -75,84 +78,40 @@ const Index = () => {
               </div>
               
               <div className="flex flex-wrap gap-4 pt-4">
-                {user ? (
-                  <>
-                    <Button 
-                      size="lg" 
-                      onClick={() => navigate("/browse")} 
-                      className="shadow-soft hover:shadow-lg transition-all duration-300 hover:scale-105 group"
-                    >
+                {user ? <>
+                    <Button size="lg" onClick={() => navigate("/browse")} className="shadow-soft hover:shadow-lg transition-all duration-300 hover:scale-105 group">
                       <Search className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
                       Browse Items
                       <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </Button>
-                    <Button 
-                      size="lg" 
-                      variant="outline" 
-                      onClick={() => navigate("/post")}
-                      className="hover:bg-primary/5 hover:border-primary transition-all duration-300"
-                    >
+                    <Button size="lg" variant="outline" onClick={() => navigate("/post")} className="hover:bg-primary/5 hover:border-primary transition-all duration-300">
                       Post an Item
                     </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button 
-                      size="lg" 
-                      onClick={() => navigate("/auth")} 
-                      className="shadow-soft hover:shadow-lg transition-all duration-300 hover:scale-105 group"
-                    >
+                  </> : <>
+                    <Button size="lg" onClick={() => navigate("/auth")} className="shadow-soft hover:shadow-lg transition-all duration-300 hover:scale-105 group">
                       Get Started Free
                       <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </Button>
-                    <Button 
-                      size="lg" 
-                      variant="outline" 
-                      onClick={() => navigate("/auth")}
-                      className="hover:bg-primary/5 hover:border-primary transition-all duration-300"
-                    >
+                    <Button size="lg" variant="outline" onClick={() => navigate("/auth")} className="hover:bg-primary/5 hover:border-primary transition-all duration-300">
                       Sign In
                     </Button>
-                  </>
-                )}
+                  </>}
               </div>
             </div>
             
-            <div className="relative lg:block animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="relative lg:block animate-fade-in" style={{
+            animationDelay: '0.2s'
+          }}>
               <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-3xl blur-3xl animate-pulse" />
               <div className="relative rounded-3xl overflow-hidden shadow-2xl hover:scale-105 transition-transform duration-500">
-                <img
-                  src={heroBanner}
-                  alt="Campus Lost and Found Community"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
+                
+                
               </div>
               
               {/* Floating cards */}
-              <div className="absolute -bottom-6 -left-6 bg-card border rounded-2xl p-4 shadow-lg backdrop-blur-sm animate-fade-in hover:scale-105 transition-transform" style={{ animationDelay: '0.4s' }}>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <CheckCircle2 className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Quick Match</div>
-                    <div className="text-sm text-muted-foreground">AI-powered suggestions</div>
-                  </div>
-                </div>
-              </div>
               
-              <div className="absolute -top-6 -right-6 bg-card border rounded-2xl p-4 shadow-lg backdrop-blur-sm animate-fade-in hover:scale-105 transition-transform" style={{ animationDelay: '0.6s' }}>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-accent/10 rounded-lg">
-                    <MapPin className="h-6 w-6 text-accent" />
-                  </div>
-                  <div>
-                    <div className="font-semibold">Live Updates</div>
-                    <div className="text-sm text-muted-foreground">Real-time notifications</div>
-                  </div>
-                </div>
-              </div>
+              
+              
             </div>
           </div>
         </div>
@@ -174,34 +133,27 @@ const Index = () => {
           </div>
           
           <div className="grid gap-8 md:grid-cols-3">
-            {[
-              {
-                icon: Search,
-                title: "Post or Search",
-                description: "Report a lost item or browse through found items posted by others",
-                gradient: "from-primary to-primary-glow",
-                delay: "0s"
-              },
-              {
-                icon: Zap,
-                title: "Get Matched",
-                description: "Our smart system automatically suggests potential matches based on details",
-                gradient: "from-accent to-accent-glow",
-                delay: "0.1s"
-              },
-              {
-                icon: Shield,
-                title: "Secure Claims",
-                description: "Verify ownership through our secure claim process and get reunited safely",
-                gradient: "from-primary via-primary-glow to-accent",
-                delay: "0.2s"
-              }
-            ].map((feature, index) => (
-              <div 
-                key={index}
-                className="group relative p-8 rounded-3xl bg-card border hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 animate-fade-in"
-                style={{ animationDelay: feature.delay }}
-              >
+            {[{
+            icon: Search,
+            title: "Post or Search",
+            description: "Report a lost item or browse through found items posted by others",
+            gradient: "from-primary to-primary-glow",
+            delay: "0s"
+          }, {
+            icon: Zap,
+            title: "Get Matched",
+            description: "Our smart system automatically suggests potential matches based on details",
+            gradient: "from-accent to-accent-glow",
+            delay: "0.1s"
+          }, {
+            icon: Shield,
+            title: "Secure Claims",
+            description: "Verify ownership through our secure claim process and get reunited safely",
+            gradient: "from-primary via-primary-glow to-accent",
+            delay: "0.2s"
+          }].map((feature, index) => <div key={index} className="group relative p-8 rounded-3xl bg-card border hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 animate-fade-in" style={{
+            animationDelay: feature.delay
+          }}>
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 
                 <div className="relative space-y-6">
@@ -221,8 +173,7 @@ const Index = () => {
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </section>
@@ -253,20 +204,11 @@ const Index = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <Button
-                size="lg"
-                onClick={() => navigate(user ? "/browse" : "/auth")}
-                className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group px-8 py-6 text-lg"
-              >
+              <Button size="lg" onClick={() => navigate(user ? "/browse" : "/auth")} className="shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group px-8 py-6 text-lg">
                 {user ? "Browse Items Now" : "Get Started Free"}
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => navigate("/browse")}
-                className="hover:bg-primary/5 hover:border-primary transition-all duration-300 px-8 py-6 text-lg"
-              >
+              <Button size="lg" variant="outline" onClick={() => navigate("/browse")} className="hover:bg-primary/5 hover:border-primary transition-all duration-300 px-8 py-6 text-lg">
                 View Demo
               </Button>
             </div>
@@ -289,8 +231,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;

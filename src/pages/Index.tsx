@@ -39,7 +39,7 @@ const Index = () => {
         }} />
         </div>
 
-        <div className="container relative py-24 md:py-40">
+        <div className="container relative md:py-40 my-0 py-0">
           <div className="grid gap-16 lg:grid-cols-2 items-center">
             <div className="space-y-8 animate-fade-in">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-primary/20 to-accent/20 border border-primary/20 backdrop-blur-sm hover:scale-105 transition-transform duration-300">
@@ -221,9 +221,7 @@ const Index = () => {
                 {user ? "Browse Items Now" : "Get Started Free"}
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button size="lg" variant="outline" onClick={() => navigate("/browse")} className="hover:bg-primary/5 hover:border-primary transition-all duration-300 px-8 py-6 text-lg">
-                View Demo
-              </Button>
+              
             </div>
 
             {/* Trust indicators */}

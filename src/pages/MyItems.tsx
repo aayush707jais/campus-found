@@ -215,12 +215,22 @@ const MyItems = () => {
         return;
       }
 
-      // For approval, automatically find and delete matches
+      // For approval, find matches in the claimant's items (opposite type)
       const claimedItem = claim.items;
-      const matches = findPotentialMatches(claimedItem, items);
+      
+      // Fetch claimant's items to find matches
+      const { data: claimantItems, error: itemsError } = await supabase
+        .from("items")
+        .select("*")
+        .eq("user_id", claim.claimant_id)
+        .eq("status", "active");
+
+      if (itemsError) throw itemsError;
+
+      const matches = findPotentialMatches(claimedItem, claimantItems || []);
       const matchedIds = matches.map(m => m.id);
 
-      // Automatically approve and delete all matched items
+      // Automatically approve and delete the claimed item + matched items from claimant
       await approveClaimAndDelete(claimId, claimedItem.id, matchedIds);
       
       // Show notification with match details
@@ -231,8 +241,13 @@ const MyItems = () => {
         
         toast({
           title: "Claim approved with auto-matching!",
-          description: `Removed ${matches.length + 1} items: ${claimedItem.title} and ${matchDetails}`,
+          description: `Removed ${matches.length + 1} items: ${claimedItem.title} and matching items from claimant`,
           duration: 6000,
+        });
+      } else {
+        toast({
+          title: "Claim approved!",
+          description: "The claimed item has been removed.",
         });
       }
     } catch (error: any) {

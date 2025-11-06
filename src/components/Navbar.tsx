@@ -4,39 +4,33 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 interface NavbarProps {
   user?: any;
 }
-
-export const Navbar = ({ user }: NavbarProps) => {
+export const Navbar = ({
+  user
+}: NavbarProps) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    const {
+      error
+    } = await supabase.auth.signOut();
     if (error) {
       toast({
         title: "Error signing out",
         description: error.message,
-        variant: "destructive",
+        variant: "destructive"
       });
     } else {
       navigate("/auth");
     }
   };
-
-  return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-      <div className="container flex h-16 items-center justify-between">
+  return <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+      <div className="container flex h-16 items-center justify-between py-0 my-0">
         <Link to="/" className="flex items-center gap-2 font-bold text-xl hover:opacity-80 transition-opacity">
           <Package className="h-6 w-6 text-primary" />
           <span className="text-foreground">
@@ -45,8 +39,7 @@ export const Navbar = ({ user }: NavbarProps) => {
         </Link>
 
         <div className="flex items-center gap-4">
-          {user ? (
-            <>
+          {user ? <>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/browse">
                   <Search className="mr-2 h-4 w-4" />
@@ -82,17 +75,13 @@ export const Navbar = ({ user }: NavbarProps) => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-            </>
-          ) : (
-            <>
+            </> : <>
               <ThemeToggle />
               <Button variant="default" size="sm" asChild>
                 <Link to="/auth">Sign In</Link>
               </Button>
-            </>
-          )}
+            </>}
         </div>
       </div>
-    </nav>
-  );
+    </nav>;
 };

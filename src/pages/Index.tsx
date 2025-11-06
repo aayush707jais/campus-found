@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Package, Search, Shield, Zap, MapPin, Clock, CheckCircle2, ArrowRight } from "lucide-react";
 import heroBanner from "@/assets/hero-banner.jpg";
+import { Navbar } from "@/components/Navbar";
 const Index = () => {
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
   return <div className="min-h-screen bg-background">
+      <Navbar user={user} />
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
         {/* Animated background elements */}

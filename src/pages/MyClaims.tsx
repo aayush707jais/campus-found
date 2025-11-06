@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, MapPin, MessageSquare, CheckCircle } from "lucide-react";
-import { MatchConfirmDialog } from "@/components/MatchConfirmDialog";
 
 interface Item {
   id: string;
@@ -34,9 +33,6 @@ const MyClaims = () => {
   const [claims, setClaims] = useState<Claim[]>([]);
   const [myItems, setMyItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [matchDialogOpen, setMatchDialogOpen] = useState(false);
-  const [selectedClaim, setSelectedClaim] = useState<Claim | null>(null);
-  const [potentialMatches, setPotentialMatches] = useState<any[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -163,27 +159,20 @@ const MyClaims = () => {
     return matches;
   };
 
-  const handleConfirmMatch = (claim: Claim) => {
-    const matches = findPotentialMatches(claim.items, myItems);
-    
-    if (matches.length > 0) {
-      setSelectedClaim(claim);
-      setPotentialMatches(matches);
-      setMatchDialogOpen(true);
-    } else {
-      toast({
-        title: "No matches found",
-        description: "We couldn't find any matching items in your posts.",
-      });
-    }
-  };
-
-  const handleMatchConfirm = async (selectedMatchIds: string[]) => {
-    if (!selectedClaim) return;
-
+  const handleAutoMatch = async (claim: Claim) => {
     try {
-      // Delete the approved claim's item and the user's matching items
-      const itemsToDelete = [selectedClaim.items.id, ...selectedMatchIds];
+      const matches = findPotentialMatches(claim.items, myItems);
+      
+      if (matches.length === 0) {
+        toast({
+          title: "No matches found",
+          description: "We couldn't find any matching items in your posts.",
+        });
+        return;
+      }
+
+      // Automatically delete all matched items
+      const itemsToDelete = [claim.items.id, ...matches.map(m => m.id)];
       
       const { error } = await supabase
         .from("items")
@@ -192,9 +181,14 @@ const MyClaims = () => {
 
       if (error) throw error;
 
+      const matchDetails = matches.map(m => 
+        `${m.title} (${Math.round(m.matchScore)}% match)`
+      ).join(", ");
+
       toast({
-        title: "Items matched and removed!",
-        description: `Successfully removed ${itemsToDelete.length} matched item${itemsToDelete.length > 1 ? "s" : ""}.`,
+        title: "Items automatically matched and removed!",
+        description: `Removed ${itemsToDelete.length} items: ${claim.items.title} and ${matchDetails}`,
+        duration: 6000,
       });
 
       // Refresh data
@@ -208,17 +202,7 @@ const MyClaims = () => {
         description: error.message,
         variant: "destructive",
       });
-    } finally {
-      setMatchDialogOpen(false);
-      setSelectedClaim(null);
-      setPotentialMatches([]);
     }
-  };
-
-  const handleMatchCancel = () => {
-    setMatchDialogOpen(false);
-    setSelectedClaim(null);
-    setPotentialMatches([]);
   };
 
   const formatDate = (dateString: string) => {
@@ -244,14 +228,6 @@ const MyClaims = () => {
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
       
-      <MatchConfirmDialog
-        open={matchDialogOpen}
-        onOpenChange={setMatchDialogOpen}
-        claimedItem={selectedClaim?.items}
-        potentialMatches={potentialMatches}
-        onConfirm={handleMatchConfirm}
-        onCancel={handleMatchCancel}
-      />
       
       <div className="container py-8">
         <div className="mb-8">
@@ -328,15 +304,15 @@ const MyClaims = () => {
                       {claim.status === "approved" && (
                         <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg mt-3">
                           <p className="text-sm font-medium text-primary mb-2">
-                            ✓ Your claim was approved! Does this match any of your posted items?
+                            ✓ Your claim was approved! Click to automatically check and remove matching items.
                           </p>
                           <Button
                             size="sm"
-                            onClick={() => handleConfirmMatch(claim)}
+                            onClick={() => handleAutoMatch(claim)}
                             className="w-full"
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
-                            Check for Matches & Remove
+                            Auto-Match & Remove Items
                           </Button>
                         </div>
                       )}

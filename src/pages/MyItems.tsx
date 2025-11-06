@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Clock, MapPin, Package, MessageSquare, CheckCircle, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MatchConfirmDialog } from "@/components/MatchConfirmDialog";
 
 interface Item {
   id: string;
@@ -42,9 +41,6 @@ const MyItems = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(true);
-  const [matchDialogOpen, setMatchDialogOpen] = useState(false);
-  const [pendingApproval, setPendingApproval] = useState<{ claimId: string; item: any } | null>(null);
-  const [potentialMatches, setPotentialMatches] = useState<any[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -219,18 +215,25 @@ const MyItems = () => {
         return;
       }
 
-      // For approval, check for potential matches
+      // For approval, automatically find and delete matches
       const claimedItem = claim.items;
       const matches = findPotentialMatches(claimedItem, items);
+      const matchedIds = matches.map(m => m.id);
 
+      // Automatically approve and delete all matched items
+      await approveClaimAndDelete(claimId, claimedItem.id, matchedIds);
+      
+      // Show notification with match details
       if (matches.length > 0) {
-        // Show match confirmation dialog
-        setPendingApproval({ claimId, item: claimedItem });
-        setPotentialMatches(matches);
-        setMatchDialogOpen(true);
-      } else {
-        // No matches found, proceed with approval
-        await approveClaimAndDelete(claimId, claimedItem.id, []);
+        const matchDetails = matches.map(m => 
+          `${m.title} (${Math.round(m.matchScore)}% match)`
+        ).join(", ");
+        
+        toast({
+          title: "Claim approved with auto-matching!",
+          description: `Removed ${matches.length + 1} items: ${claimedItem.title} and ${matchDetails}`,
+          duration: 6000,
+        });
       }
     } catch (error: any) {
       toast({
@@ -283,30 +286,6 @@ const MyItems = () => {
     }
   };
 
-  const handleMatchConfirm = async (selectedMatchIds: string[]) => {
-    if (!pendingApproval) return;
-
-    await approveClaimAndDelete(
-      pendingApproval.claimId,
-      pendingApproval.item.id,
-      selectedMatchIds
-    );
-
-    setMatchDialogOpen(false);
-    setPendingApproval(null);
-    setPotentialMatches([]);
-  };
-
-  const handleMatchCancel = async () => {
-    if (!pendingApproval) return;
-
-    // Approve without deleting matched items
-    await approveClaimAndDelete(pendingApproval.claimId, pendingApproval.item.id, []);
-
-    setMatchDialogOpen(false);
-    setPendingApproval(null);
-    setPotentialMatches([]);
-  };
 
   const handleDeleteItem = async (itemId: string) => {
     try {
@@ -358,14 +337,6 @@ const MyItems = () => {
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
       
-      <MatchConfirmDialog
-        open={matchDialogOpen}
-        onOpenChange={setMatchDialogOpen}
-        claimedItem={pendingApproval?.item}
-        potentialMatches={potentialMatches}
-        onConfirm={handleMatchConfirm}
-        onCancel={handleMatchCancel}
-      />
 
       <div className="container py-8">
         <div className="mb-8">

@@ -10,6 +10,7 @@ import PostItem from "./pages/PostItem";
 import ItemDetail from "./pages/ItemDetail";
 import MyItems from "./pages/MyItems";
 import MyClaims from "./pages/MyClaims";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/item/:id" element={<ItemDetail />} />
           <Route path="/my-items" element={<MyItems />} />
           <Route path="/my-claims" element={<MyClaims />} />
+          <Route path="/profile" element={<Profile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

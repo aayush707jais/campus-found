@@ -40,7 +40,6 @@ const MyItems = () => {
   const [user, setUser] = useState<any>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
-  const [myPotentialMatches, setMyPotentialMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -85,10 +84,6 @@ const MyItems = () => {
               ),
             });
             
-            // Refresh potential matches
-            if (user) {
-              findMyPotentialMatches(user.id, items);
-            }
           }
         }
       )
@@ -120,11 +115,6 @@ const MyItems = () => {
 
       if (error) throw error;
       setItems(data || []);
-      
-      // Find potential matches after items are loaded
-      if (data && data.length > 0) {
-        setTimeout(() => findMyPotentialMatches(userId, data), 100);
-      }
     } catch (error: any) {
       toast({
         title: "Error loading items",
@@ -136,40 +126,6 @@ const MyItems = () => {
     }
   };
 
-  const findMyPotentialMatches = async (userId: string, userItems: Item[]) => {
-    try {
-      // Fetch all active items from other users
-      const { data: allItems, error } = await supabase
-        .from("items")
-        .select("*")
-        .eq("status", "active")
-        .neq("user_id", userId);
-
-      if (error) throw error;
-      if (!allItems) return;
-
-      // Find matches for each of user's items
-      const matches: any[] = [];
-      userItems.forEach(myItem => {
-        const itemMatches = allItems
-          .filter(item => item.type !== myItem.type) // opposite type
-          .map(item => ({
-            ...item,
-            matchScore: calculateMatchScore(myItem, item),
-            matchedWith: myItem
-          }))
-          .filter(item => item.matchScore >= 40);
-
-        matches.push(...itemMatches);
-      });
-
-      // Sort by match score
-      matches.sort((a, b) => b.matchScore - a.matchScore);
-      setMyPotentialMatches(matches);
-    } catch (error: any) {
-      console.error("Error finding matches:", error);
-    }
-  };
 
   const fetchClaimsOnMyItems = async (userId: string) => {
     try {
@@ -453,9 +409,6 @@ const MyItems = () => {
             <TabsTrigger value="claims">
               Claims Received ({claims.length})
             </TabsTrigger>
-            <TabsTrigger value="matches">
-              Potential Matches ({myPotentialMatches.length})
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="items" className="space-y-4">
@@ -590,63 +543,6 @@ const MyItems = () => {
                           </Button>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="matches" className="space-y-4">
-            {myPotentialMatches.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    No potential matches found for your items.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {myPotentialMatches.map((match) => (
-                  <Card key={`${match.id}-${match.matchedWith.id}`} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CardTitle>{match.title}</CardTitle>
-                            <Badge variant={match.type === "lost" ? "destructive" : "default"}>
-                              {match.type}
-                            </Badge>
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                              {Math.round(match.matchScore)}% match
-                            </Badge>
-                          </div>
-                          <CardDescription>
-                            Matches your item: <strong>{match.matchedWith.title}</strong>
-                          </CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <p className="text-sm">{match.description}</p>
-                      <div className="flex gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          {match.location}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {formatDate(match.date)}
-                        </span>
-                      </div>
-                      <Button 
-                        onClick={() => navigate(`/item/${match.id}`)}
-                        className="w-full"
-                      >
-                        View & Contact Owner
-                      </Button>
                     </CardContent>
                   </Card>
                 ))}

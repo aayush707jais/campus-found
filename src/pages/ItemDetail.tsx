@@ -154,13 +154,15 @@ const ItemDetail = () => {
         <div className="grid gap-8 md:grid-cols-2">
           <div>
             {item.image_url ? (
-              <img
-                src={item.image_url}
-                alt={item.title}
-                className="w-full h-96 object-cover rounded-lg shadow-card"
-              />
+              <div className="w-full aspect-[4/3] rounded-lg overflow-hidden shadow-card">
+                <img
+                  src={item.image_url}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             ) : (
-              <div className="w-full h-96 bg-gradient-to-br from-muted to-muted/50 rounded-lg flex items-center justify-center">
+              <div className="w-full aspect-[4/3] bg-gradient-to-br from-muted to-muted/50 rounded-lg flex items-center justify-center">
                 <Package className="h-24 w-24 text-muted-foreground" />
               </div>
             )}

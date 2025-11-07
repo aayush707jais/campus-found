@@ -249,7 +249,7 @@ const MyClaims = () => {
               <Card key={claim.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                 <div className="flex flex-col md:flex-row">
                   {claim.items.image_url && (
-                    <div className="md:w-48 h-48 overflow-hidden bg-muted">
+                    <div className="md:w-48 w-full aspect-[4/3] md:aspect-square overflow-hidden bg-muted flex-shrink-0">
                       <img
                         src={claim.items.image_url}
                         alt={claim.items.title}

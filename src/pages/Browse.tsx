@@ -215,10 +215,10 @@ const Browse = () => {
         </div>
 
         {loading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Card key={i} className="animate-pulse">
-                <div className="h-48 bg-muted rounded-t-lg" />
+                <div className="aspect-card-image bg-muted rounded-t-lg" />
                 <CardHeader>
                   <div className="h-6 bg-muted rounded w-3/4 mb-2" />
                   <div className="h-4 bg-muted rounded w-1/2" />
@@ -237,7 +237,7 @@ const Browse = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {filteredItems.map((item) => {
               const matchInfo = getMatchInfo(item);
               
@@ -248,7 +248,7 @@ const Browse = () => {
                   onClick={() => navigate(`/item/${item.id}`)}
                 >
                   {item.image_url ? (
-                    <div className="h-48 overflow-hidden">
+                    <div className="aspect-card-image">
                       <img
                         src={item.image_url}
                         alt={item.title}
@@ -256,7 +256,7 @@ const Browse = () => {
                       />
                     </div>
                   ) : (
-                    <div className="h-48 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
+                    <div className="aspect-card-image bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
                       <Package className="h-16 w-16 text-muted-foreground" />
                     </div>
                   )}

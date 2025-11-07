@@ -29,8 +29,8 @@ export const Navbar = ({
       navigate("/auth");
     }
   };
-  return <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
-      <div className="container flex h-16 items-center justify-between py-0 my-0">
+  return <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 min-h-[4rem]">
+      <div className="container flex h-16 items-center justify-between py-0 my-0 overflow-x-auto sm:overflow-x-visible">
         <Link to="/" className="flex items-center gap-2 font-bold text-xl hover:opacity-80 transition-opacity">
           <Package className="h-6 w-6 text-primary" />
           <span className="text-foreground">

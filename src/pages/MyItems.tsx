@@ -44,10 +44,15 @@ const MyItems = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Effect 1: Initial auth check (runs once)
   useEffect(() => {
     checkAuth();
+  }, []);
 
-    // Subscribe to new items for real-time match notifications
+  // Effect 2: Real-time subscription (runs when user is available)
+  useEffect(() => {
+    if (!user) return; // Guard: only subscribe when user exists
+
     const channel = supabase
       .channel('new-items')
       .on(
@@ -59,8 +64,12 @@ const MyItems = () => {
         },
         async (payload) => {
           const newItem = payload.new as any;
+          
           // Don't notify for own items
-          if (newItem.user_id === user?.id) return;
+          if (newItem.user_id === user.id) return;
+          
+          // Guard: only check matches if items exist
+          if (items.length === 0) return;
 
           // Check if it matches any of user's items
           const matches = items
@@ -83,7 +92,6 @@ const MyItems = () => {
                 </Button>
               ),
             });
-            
           }
         }
       )
@@ -92,7 +100,7 @@ const MyItems = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, items]);
+  }, [user]);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();

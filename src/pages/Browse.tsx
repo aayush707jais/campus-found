@@ -13,6 +13,7 @@ import { format } from "date-fns";
 
 const Browse = () => {
   const [items, setItems] = useState<any[]>([]);
+  const [userItems, setUserItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -29,6 +30,8 @@ const Browse = () => {
         return;
       }
       setUser(session.user);
+      // Fetch user's items for matching
+      fetchUserItems(session.user.id);
     };
 
     checkAuth();
@@ -38,6 +41,7 @@ const Browse = () => {
         navigate("/auth");
       } else {
         setUser(session.user);
+        fetchUserItems(session.user.id);
       }
     });
 
@@ -66,6 +70,83 @@ const Browse = () => {
       setItems(data || []);
     }
     setLoading(false);
+  };
+
+  const fetchUserItems = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("items")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "active");
+
+    if (!error && data) {
+      setUserItems(data);
+    }
+  };
+
+  const calculateMatchScore = (item1: any, item2: any): number => {
+    let score = 0;
+
+    // Category match (40 points)
+    if (item1.category.toLowerCase() === item2.category.toLowerCase()) {
+      score += 40;
+    }
+
+    // Location similarity (30 points)
+    const loc1 = item1.location.toLowerCase();
+    const loc2 = item2.location.toLowerCase();
+    const loc1Words = loc1.split(/[\s,]+/);
+    const loc2Words = loc2.split(/[\s,]+/);
+    const commonWords = loc1Words.filter(word => loc2Words.includes(word));
+    if (commonWords.length > 0) {
+      score += Math.min(30, commonWords.length * 10);
+    }
+
+    // Date proximity (15 points) - within 7 days
+    const date1 = new Date(item1.date).getTime();
+    const date2 = new Date(item2.date).getTime();
+    const daysDiff = Math.abs(date1 - date2) / (1000 * 60 * 60 * 24);
+    if (daysDiff <= 7) {
+      score += Math.max(0, 15 - daysDiff * 2);
+    }
+
+    // Title/Description similarity (15 points)
+    const title1 = item1.title.toLowerCase();
+    const title2 = item2.title.toLowerCase();
+    const desc1 = item1.description.toLowerCase();
+    const desc2 = item2.description.toLowerCase();
+    
+    const titleWords1 = title1.split(/\s+/);
+    const titleWords2 = title2.split(/\s+/);
+    const descWords1 = desc1.split(/\s+/);
+    const descWords2 = desc2.split(/\s+/);
+    
+    const commonTitleWords = titleWords1.filter(word => 
+      word.length > 3 && titleWords2.includes(word)
+    );
+    const commonDescWords = descWords1.filter(word => 
+      word.length > 3 && descWords2.includes(word)
+    );
+    
+    score += Math.min(15, (commonTitleWords.length + commonDescWords.length) * 3);
+
+    return score;
+  };
+
+  const getMatchInfo = (item: any) => {
+    if (userItems.length === 0 || item.user_id === user?.id) return null;
+    
+    const oppositeType = item.type === "lost" ? "found" : "lost";
+    const matches = userItems
+      .filter(userItem => userItem.type === oppositeType)
+      .map(userItem => ({
+        score: calculateMatchScore(item, userItem),
+        item: userItem
+      }))
+      .filter(m => m.score >= 40)
+      .sort((a, b) => b.score - a.score);
+
+    return matches.length > 0 ? matches[0] : null;
   };
 
   const filteredItems = items.filter((item) => {
@@ -157,39 +238,49 @@ const Browse = () => {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredItems.map((item) => (
-              <Card
-                key={item.id}
-                className="overflow-hidden hover:shadow-soft transition-all cursor-pointer"
-                onClick={() => navigate(`/item/${item.id}`)}
-              >
-                {item.image_url ? (
-                  <div className="h-48 overflow-hidden">
-                    <img
-                      src={item.image_url}
-                      alt={item.title}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-48 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                    <Package className="h-16 w-16 text-muted-foreground" />
-                  </div>
-                )}
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <CardTitle className="line-clamp-1">{item.title}</CardTitle>
-                    <Badge
-                      variant={item.type === "lost" ? "destructive" : "default"}
-                      className={item.type === "found" ? "bg-accent" : ""}
-                    >
-                      {item.type}
-                    </Badge>
-                  </div>
-                  <CardDescription className="line-clamp-2">
-                    {item.description}
-                  </CardDescription>
-                </CardHeader>
+            {filteredItems.map((item) => {
+              const matchInfo = getMatchInfo(item);
+              
+              return (
+                <Card
+                  key={item.id}
+                  className="overflow-hidden hover:shadow-soft transition-all cursor-pointer"
+                  onClick={() => navigate(`/item/${item.id}`)}
+                >
+                  {item.image_url ? (
+                    <div className="h-48 overflow-hidden">
+                      <img
+                        src={item.image_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-48 bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
+                      <Package className="h-16 w-16 text-muted-foreground" />
+                    </div>
+                  )}
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <CardTitle className="line-clamp-1">{item.title}</CardTitle>
+                      <div className="flex gap-2 flex-wrap">
+                        {matchInfo && (
+                          <Badge className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-100 dark:border-green-700">
+                            {Math.round(matchInfo.score)}% Match!
+                          </Badge>
+                        )}
+                        <Badge
+                          variant={item.type === "lost" ? "destructive" : "default"}
+                          className={item.type === "found" ? "bg-accent" : ""}
+                        >
+                          {item.type}
+                        </Badge>
+                      </div>
+                    </div>
+                    <CardDescription className="line-clamp-2">
+                      {item.description}
+                    </CardDescription>
+                  </CardHeader>
                 <CardFooter className="flex flex-col items-start gap-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
@@ -202,7 +293,8 @@ const Browse = () => {
                   <Badge variant="outline">{item.category}</Badge>
                 </CardFooter>
               </Card>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

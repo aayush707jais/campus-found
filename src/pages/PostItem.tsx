@@ -11,6 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Upload, Loader2 } from "lucide-react";
 import { z } from "zod";
+import placeholderElectronics from "@/assets/placeholder-electronics.jpg";
+import placeholderKeys from "@/assets/placeholder-keys.jpg";
+import placeholderWallet from "@/assets/placeholder-wallet.jpg";
+import placeholderID from "@/assets/placeholder-id.jpg";
+import placeholderBackpack from "@/assets/placeholder-backpack.jpg";
+import placeholderBooks from "@/assets/placeholder-books.jpg";
+import placeholderClothing from "@/assets/placeholder-clothing.jpg";
+import placeholderJewelry from "@/assets/placeholder-jewelry.jpg";
+import placeholderSports from "@/assets/placeholder-sports.jpg";
+import placeholderOther from "@/assets/placeholder-other.jpg";
 
 const itemSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100),
@@ -34,6 +44,19 @@ const categories = [
   "Sports Equipment",
   "Other",
 ];
+
+const categoryPlaceholders: Record<string, string> = {
+  "Electronics": placeholderElectronics,
+  "Keys": placeholderKeys,
+  "Wallet/Purse": placeholderWallet,
+  "ID Card": placeholderID,
+  "Backpack/Bag": placeholderBackpack,
+  "Books": placeholderBooks,
+  "Clothing": placeholderClothing,
+  "Jewelry": placeholderJewelry,
+  "Sports Equipment": placeholderSports,
+  "Other": placeholderOther,
+};
 
 const PostItem = () => {
   const [user, setUser] = useState<any>(null);
@@ -135,6 +158,9 @@ const PostItem = () => {
         .getPublicUrl(fileName);
 
       imageUrl = publicUrl;
+    } else if (formData.category && categoryPlaceholders[formData.category]) {
+      // Use category placeholder if no image uploaded
+      imageUrl = categoryPlaceholders[formData.category];
     }
 
     const { error } = await supabase.from("items").insert({

@@ -32,9 +32,9 @@ const Index = () => {
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background">
         {/* Animated background elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse max-w-[30vw] max-h-[30vw]" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse max-w-[40vw] max-h-[40vw]" style={{
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{
           animationDelay: '1s'
         }} />
         </div>
@@ -101,13 +101,13 @@ const Index = () => {
               </div>
             </div>
             
-            <div className="relative lg:block animate-fade-in overflow-hidden" style={{
+            <div className="relative lg:block animate-fade-in" style={{
             animationDelay: '0.2s'
           }}>
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-3xl blur-3xl animate-pulse pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-3xl blur-3xl animate-pulse" />
               
               {/* Emoji Animation */}
-              <div className="relative flex items-center justify-center min-h-[400px] overflow-hidden">
+              <div className="relative flex items-center justify-center min-h-[400px]">
                 <div className="relative w-48 h-48 bg-card/50 backdrop-blur-sm rounded-3xl border border-primary/20 shadow-2xl flex items-center justify-center">
                   {/* Sad emoji - shows at start */}
                   <div className="absolute inset-0 flex items-center justify-center animate-[lost-item-sad_6s_ease-in-out_infinite]">
@@ -194,9 +194,9 @@ const Index = () => {
       {/* CTA Section */}
       <section className="py-32 relative overflow-hidden">
         {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/10 pointer-events-none" />
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] max-w-[80vw] max-h-[80vw] bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-primary/10" />
+        <div className="absolute inset-0">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-br from-primary/20 to-accent/20 rounded-full blur-3xl animate-pulse" />
         </div>
 
         <div className="container relative">

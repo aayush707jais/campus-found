@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import Navbar from "@/components/Navbar";
+import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,22 +15,22 @@ interface Item {
   title: string;
   category: string;
   type: string;
-  status: string;
+  status: "active" | "claimed" | "resolved";
   location: string;
   date: string;
   user_id: string;
-  profiles?: { full_name: string; email: string };
+  profiles?: { full_name: string; email: string } | null;
 }
 
 interface Claim {
   id: string;
-  status: string;
+  status: "pending" | "approved" | "rejected";
   message: string;
   created_at: string;
   claimant_id: string;
   item_id: string;
-  items?: { title: string };
-  profiles?: { full_name: string; email: string };
+  items?: { title: string } | null;
+  profiles?: { full_name: string; email: string } | null;
 }
 
 const Admin = () => {
@@ -86,7 +86,7 @@ const Admin = () => {
       .from("items")
       .select(`
         *,
-        profiles:user_id (full_name, email)
+        profiles!items_user_id_fkey (full_name, email)
       `)
       .order("created_at", { ascending: false });
 
@@ -94,7 +94,7 @@ const Admin = () => {
       toast.error("Failed to fetch items");
       console.error(error);
     } else {
-      setItems(data || []);
+      setItems(data as any || []);
     }
   };
 
@@ -103,8 +103,8 @@ const Admin = () => {
       .from("claims")
       .select(`
         *,
-        items:item_id (title),
-        profiles:claimant_id (full_name, email)
+        items!claims_item_id_fkey (title),
+        profiles!claims_claimant_id_fkey (full_name, email)
       `)
       .order("created_at", { ascending: false });
 
@@ -112,11 +112,11 @@ const Admin = () => {
       toast.error("Failed to fetch claims");
       console.error(error);
     } else {
-      setClaims(data || []);
+      setClaims(data as any || []);
     }
   };
 
-  const updateItemStatus = async (itemId: string, newStatus: string) => {
+  const updateItemStatus = async (itemId: string, newStatus: "active" | "claimed" | "resolved") => {
     const { error } = await supabase
       .from("items")
       .update({ status: newStatus })
@@ -146,7 +146,7 @@ const Admin = () => {
     }
   };
 
-  const updateClaimStatus = async (claimId: string, newStatus: string) => {
+  const updateClaimStatus = async (claimId: string, newStatus: "pending" | "approved" | "rejected") => {
     const { error } = await supabase
       .from("claims")
       .update({ status: newStatus })
@@ -264,7 +264,7 @@ const Admin = () => {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => updateItemStatus(item.id, "matched")}
+                                onClick={() => updateItemStatus(item.id, "resolved")}
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </Button>

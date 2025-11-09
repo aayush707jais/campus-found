@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Package, Search, Shield, Zap, MapPin, Clock, CheckCircle2, ArrowRight } from "lucide-react";
 import heroBanner from "@/assets/hero-banner.jpg";
 import { Navbar } from "@/components/Navbar";
+import { FeatureModal, Step } from "@/components/FeatureModal";
 const Index = () => {
   const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
@@ -146,47 +147,195 @@ const Index = () => {
           </div>
           
           <div className="grid gap-8 md:grid-cols-3">
-            {[{
-            icon: Search,
-            title: "Post or Search",
-            description: "Report a lost item or browse through found items posted by others",
-            gradient: "from-primary to-primary-glow",
-            delay: "0s"
-          }, {
-            icon: Zap,
-            title: "Get Matched",
-            description: "Our smart system automatically suggests potential matches based on details",
-            gradient: "from-accent to-accent-glow",
-            delay: "0.1s"
-          }, {
-            icon: Shield,
-            title: "Secure Claims",
-            description: "Verify ownership through our secure claim process and get reunited safely",
-            gradient: "from-primary via-primary-glow to-accent",
-            delay: "0.2s"
-          }].map((feature, index) => <div key={index} className="group relative p-8 rounded-3xl bg-card border hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 animate-fade-in" style={{
-            animationDelay: feature.delay
-          }}>
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                
-                <div className="relative space-y-6">
-                  <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${feature.gradient} shadow-lg group-hover:scale-110 transition-transform duration-500`}>
-                    <feature.icon className="h-8 w-8 text-white" />
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <h3 className="text-2xl font-bold">{feature.title}</h3>
-                    <p className="text-muted-foreground leading-relaxed">
-                      {feature.description}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    Learn more
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  </div>
+            {/* Post or Search */}
+            <div className="group relative p-8 rounded-3xl bg-card border hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 animate-fade-in">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              <div className="relative space-y-6">
+                <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-primary to-primary-glow shadow-lg group-hover:scale-110 transition-transform duration-500">
+                  <Search className="h-8 w-8 text-white" />
                 </div>
-              </div>)}
+                
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-bold">Post or Search</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Report a lost item or browse through found items posted by others
+                  </p>
+                </div>
+
+                <FeatureModal 
+                  title="Post or Search"
+                  trigger={
+                    <button className="flex items-center gap-2 text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-500 hover:gap-3">
+                      Learn more
+                      <ArrowRight className="h-4 w-4 transition-transform" />
+                    </button>
+                  }
+                >
+                  <Step
+                    number={1}
+                    title="Lost Something?"
+                    description="Create a detailed post about your lost item to help others identify it."
+                    details={[
+                      "Click 'Post an Item' and select 'Lost'",
+                      "Choose the category (wallet, keys, electronics, etc.)",
+                      "Add a clear title like 'Lost Black Wallet near Library'",
+                      "Describe unique features (color, brand, distinctive marks)",
+                      "Specify where and when you last saw it",
+                      "Upload photos if you have any reference images"
+                    ]}
+                  />
+                  <Step
+                    number={2}
+                    title="Found Something?"
+                    description="Help reunite items with their owners by posting what you found."
+                    details={[
+                      "Select 'Found' when posting an item",
+                      "Take clear photos from multiple angles",
+                      "Describe the item accurately but avoid too many specifics (for verification)",
+                      "Mark the approximate location where you found it",
+                      "The system will automatically notify potential owners"
+                    ]}
+                  />
+                  <Step
+                    number={3}
+                    title="Browse Items"
+                    description="Search through all posted items to find yours or help identify owners."
+                    details={[
+                      "Use filters by category, date, and location",
+                      "Search using keywords from your item description",
+                      "Check regularly - new items are posted daily",
+                      "Click on items to see full details and contact options"
+                    ]}
+                  />
+                </FeatureModal>
+              </div>
+            </div>
+
+            {/* Get Matched */}
+            <div className="group relative p-8 rounded-3xl bg-card border hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              <div className="relative space-y-6">
+                <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-accent to-accent-glow shadow-lg group-hover:scale-110 transition-transform duration-500">
+                  <Zap className="h-8 w-8 text-white" />
+                </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-bold">Get Matched</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Our smart system automatically suggests potential matches based on details
+                  </p>
+                </div>
+
+                <FeatureModal 
+                  title="Get Matched"
+                  trigger={
+                    <button className="flex items-center gap-2 text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-500 hover:gap-3">
+                      Learn more
+                      <ArrowRight className="h-4 w-4 transition-transform" />
+                    </button>
+                  }
+                >
+                  <Step
+                    number={1}
+                    title="Automatic Matching"
+                    description="Our intelligent system analyzes all posts and finds potential matches for you."
+                    details={[
+                      "Matches are based on category, location, date, and description",
+                      "System compares lost items with found items automatically",
+                      "You'll receive notifications when potential matches are found",
+                      "Match score indicates likelihood of being your item"
+                    ]}
+                  />
+                  <Step
+                    number={2}
+                    title="Review Suggestions"
+                    description="Browse through suggested matches and identify your item."
+                    details={[
+                      "Check your 'My Claims' page for match notifications",
+                      "Compare photos and descriptions carefully",
+                      "Look for unique identifiers you mentioned",
+                      "Multiple matches? Review each one thoroughly"
+                    ]}
+                  />
+                  <Step
+                    number={3}
+                    title="Improve Match Accuracy"
+                    description="The more details you provide, the better the matches."
+                    details={[
+                      "Add specific details (scratches, stickers, wear patterns)",
+                      "Include brand names and model numbers",
+                      "Specify exact location and time",
+                      "Update your post if you remember additional details"
+                    ]}
+                  />
+                </FeatureModal>
+              </div>
+            </div>
+
+            {/* Secure Claims */}
+            <div className="group relative p-8 rounded-3xl bg-card border hover:border-primary/50 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 animate-fade-in" style={{ animationDelay: "0.2s" }}>
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              <div className="relative space-y-6">
+                <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-primary via-primary-glow to-accent shadow-lg group-hover:scale-110 transition-transform duration-500">
+                  <Shield className="h-8 w-8 text-white" />
+                </div>
+                
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-bold">Secure Claims</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Verify ownership through our secure claim process and get reunited safely
+                  </p>
+                </div>
+
+                <FeatureModal 
+                  title="Secure Claims"
+                  trigger={
+                    <button className="flex items-center gap-2 text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-500 hover:gap-3">
+                      Learn more
+                      <ArrowRight className="h-4 w-4 transition-transform" />
+                    </button>
+                  }
+                >
+                  <Step
+                    number={1}
+                    title="Initiate a Claim"
+                    description="Found your item? Start the secure claim process."
+                    details={[
+                      "Click 'Claim This Item' on the matching post",
+                      "Provide verification details that only the owner would know",
+                      "Describe unique features not mentioned in the public post",
+                      "Include any proof of ownership if available"
+                    ]}
+                  />
+                  <Step
+                    number={2}
+                    title="Verification Process"
+                    description="The finder reviews your claim to verify ownership."
+                    details={[
+                      "Finder compares your details with the actual item",
+                      "They may ask follow-up questions for verification",
+                      "Private details aren't visible to others",
+                      "Process ensures only rightful owners can claim"
+                    ]}
+                  />
+                  <Step
+                    number={3}
+                    title="Safe Meetup"
+                    description="Arrange a secure exchange in a public campus location."
+                    details={[
+                      "Choose a public, well-lit meeting spot",
+                      "Campus security offices or cafeterias work well",
+                      "Bring your student ID for additional verification",
+                      "Confirm the meetup time via the platform messaging",
+                      "Mark the item as 'Returned' once you receive it"
+                    ]}
+                  />
+                </FeatureModal>
+              </div>
+            </div>
           </div>
         </div>
       </section>

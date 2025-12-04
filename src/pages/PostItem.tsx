@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, Sparkles } from "lucide-react";
 import { z } from "zod";
+import { useAIMatching } from "@/hooks/useAIMatching";
 import placeholderElectronics from "@/assets/placeholder-electronics.jpg";
 import placeholderKeys from "@/assets/placeholder-keys.jpg";
 import placeholderWallet from "@/assets/placeholder-wallet.jpg";
@@ -61,6 +62,7 @@ const categoryPlaceholders: Record<string, string> = {
 const PostItem = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [findingMatches, setFindingMatches] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [formData, setFormData] = useState({
@@ -75,6 +77,7 @@ const PostItem = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { findMatchesForItem } = useAIMatching();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -163,7 +166,7 @@ const PostItem = () => {
       imageUrl = categoryPlaceholders[formData.category];
     }
 
-    const { error } = await supabase.from("items").insert({
+    const { data: insertedItem, error } = await supabase.from("items").insert({
       user_id: user.id,
       title: formData.title,
       description: formData.description,
@@ -173,7 +176,7 @@ const PostItem = () => {
       type: formData.type,
       contact_info: formData.contactInfo,
       image_url: imageUrl,
-    });
+    }).select().single();
 
     setLoading(false);
 
@@ -186,9 +189,19 @@ const PostItem = () => {
     } else {
       toast({
         title: "Item posted!",
-        description: "Your item has been posted successfully.",
+        description: "Your item has been posted. Finding AI matches...",
       });
-      navigate("/browse");
+
+      // Run AI matching in background
+      if (insertedItem) {
+        setFindingMatches(true);
+        findMatchesForItem(insertedItem as any).finally(() => {
+          setFindingMatches(false);
+          navigate("/browse");
+        });
+      } else {
+        navigate("/browse");
+      }
     }
   };
 
@@ -350,11 +363,16 @@ const PostItem = () => {
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full" disabled={loading || findingMatches}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Posting...
+                  </>
+                ) : findingMatches ? (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4 animate-pulse" />
+                    Finding AI Matches...
                   </>
                 ) : (
                   "Post Item"

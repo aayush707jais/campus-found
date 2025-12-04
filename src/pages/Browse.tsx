@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
@@ -6,21 +6,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Calendar, Package } from "lucide-react";
+import { Search, MapPin, Calendar, Package, Sparkles, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useAIMatching, AIMatchResult, Item } from "@/hooks/useAIMatching";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const Browse = () => {
-  const [items, setItems] = useState<any[]>([]);
-  const [userItems, setUserItems] = useState<any[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [userItems, setUserItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [user, setUser] = useState<any>(null);
+  const [aiMatches, setAiMatches] = useState<Map<string, AIMatchResult>>(new Map());
+  const [loadingAI, setLoadingAI] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { batchMatchItems } = useAIMatching();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -80,73 +85,71 @@ const Browse = () => {
       .eq("status", "active");
 
     if (!error && data) {
-      setUserItems(data);
+      setUserItems(data as Item[]);
     }
   };
 
-  const calculateMatchScore = (item1: any, item2: any): number => {
-    let score = 0;
+  // Run AI matching when user items or browsed items change
+  const runAIMatching = useCallback(async () => {
+    if (userItems.length === 0 || items.length === 0 || !user) return;
 
-    // Category match (40 points)
-    if (item1.category.toLowerCase() === item2.category.toLowerCase()) {
-      score += 40;
+    // Find items that could match user's items (opposite types, not owned by user)
+    const itemsToMatch = items.filter(item => item.user_id !== user.id);
+    if (itemsToMatch.length === 0) return;
+
+    // For each user item, find potential matches
+    setLoadingAI(true);
+    const allMatches = new Map<string, AIMatchResult>();
+
+    for (const userItem of userItems) {
+      const oppositeType = userItem.type === "lost" ? "found" : "lost";
+      const candidates = itemsToMatch.filter(item => item.type === oppositeType).slice(0, 10);
+      
+      if (candidates.length > 0) {
+        try {
+          const matches = await batchMatchItems(userItem, candidates);
+          matches.forEach(m => {
+            const existing = allMatches.get(m.matchedItemId);
+            // Keep the higher score if item already has a match
+            if (!existing || m.score > existing.score) {
+              allMatches.set(m.matchedItemId, m);
+            }
+          });
+        } catch (err) {
+          console.error("AI matching error:", err);
+        }
+      }
     }
 
-    // Location similarity (30 points)
-    const loc1 = item1.location.toLowerCase();
-    const loc2 = item2.location.toLowerCase();
-    const loc1Words = loc1.split(/[\s,]+/);
-    const loc2Words = loc2.split(/[\s,]+/);
-    const commonWords = loc1Words.filter(word => loc2Words.includes(word));
-    if (commonWords.length > 0) {
-      score += Math.min(30, commonWords.length * 10);
+    setAiMatches(allMatches);
+    setLoadingAI(false);
+
+    if (allMatches.size > 0) {
+      toast({
+        title: "AI Matches Found",
+        description: `Found ${allMatches.size} potential match${allMatches.size > 1 ? "es" : ""} with your items!`,
+      });
     }
+  }, [userItems, items, user, batchMatchItems, toast]);
 
-    // Date proximity (15 points) - within 7 days
-    const date1 = new Date(item1.date).getTime();
-    const date2 = new Date(item2.date).getTime();
-    const daysDiff = Math.abs(date1 - date2) / (1000 * 60 * 60 * 24);
-    if (daysDiff <= 7) {
-      score += Math.max(0, 15 - daysDiff * 2);
+  useEffect(() => {
+    if (userItems.length > 0 && items.length > 0 && user) {
+      // Delay slightly to avoid running on every render
+      const timeout = setTimeout(() => {
+        runAIMatching();
+      }, 1000);
+      return () => clearTimeout(timeout);
     }
+  }, [userItems.length, items.length, user?.id]);
 
-    // Title/Description similarity (15 points)
-    const title1 = item1.title.toLowerCase();
-    const title2 = item2.title.toLowerCase();
-    const desc1 = item1.description.toLowerCase();
-    const desc2 = item2.description.toLowerCase();
-    
-    const titleWords1 = title1.split(/\s+/);
-    const titleWords2 = title2.split(/\s+/);
-    const descWords1 = desc1.split(/\s+/);
-    const descWords2 = desc2.split(/\s+/);
-    
-    const commonTitleWords = titleWords1.filter(word => 
-      word.length > 3 && titleWords2.includes(word)
-    );
-    const commonDescWords = descWords1.filter(word => 
-      word.length > 3 && descWords2.includes(word)
-    );
-    
-    score += Math.min(15, (commonTitleWords.length + commonDescWords.length) * 3);
 
-    return score;
-  };
-
-  const getMatchInfo = (item: any) => {
-    if (userItems.length === 0 || item.user_id === user?.id) return null;
-    
-    const oppositeType = item.type === "lost" ? "found" : "lost";
-    const matches = userItems
-      .filter(userItem => userItem.type === oppositeType)
-      .map(userItem => ({
-        score: calculateMatchScore(item, userItem),
-        item: userItem
-      }))
-      .filter(m => m.score >= 40)
-      .sort((a, b) => b.score - a.score);
-
-    return matches.length > 0 ? matches[0] : null;
+  const getMatchInfo = (item: Item) => {
+    // Return AI match if available
+    const aiMatch = aiMatches.get(item.id);
+    if (aiMatch) {
+      return aiMatch;
+    }
+    return null;
   };
 
   const filteredItems = items.filter((item) => {
@@ -161,21 +164,40 @@ const Browse = () => {
     return matchesSearch && matchesType && matchesCategory;
   });
 
+  // Sort by AI match score (highest first)
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    const matchA = aiMatches.get(a.id);
+    const matchB = aiMatches.get(b.id);
+    if (matchA && matchB) return matchB.score - matchA.score;
+    if (matchA) return -1;
+    if (matchB) return 1;
+    return 0;
+  });
+
   const categories = [...new Set(items.map((item) => item.category))];
 
   if (!user) return null;
 
   return (
+    <TooltipProvider>
     <div className="min-h-screen bg-background">
       <Navbar user={user} />
       
       <div className="container py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
-            Browse Items
-          </h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+              Browse Items
+            </h1>
+            {loadingAI && (
+              <Badge variant="outline" className="gap-1">
+                <Sparkles className="h-3 w-3 animate-pulse" />
+                AI Matching...
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
-            Search through lost and found items on campus
+            Search through lost and found items on campus. AI matches are highlighted.
           </p>
         </div>
 
@@ -238,7 +260,7 @@ const Browse = () => {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredItems.map((item) => {
+            {sortedItems.map((item) => {
               const matchInfo = getMatchInfo(item);
               
               return (
@@ -265,9 +287,18 @@ const Browse = () => {
                       <CardTitle className="line-clamp-1">{item.title}</CardTitle>
                       <div className="flex gap-2 flex-wrap">
                         {matchInfo && (
-                          <Badge className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-100 dark:border-green-700">
-                            {Math.round(matchInfo.score)}% Match!
-                          </Badge>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-100 dark:border-green-700 cursor-help gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                {Math.round(matchInfo.score)}% AI Match
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="font-medium">AI Reasoning:</p>
+                              <p className="text-sm">{matchInfo.reasoning}</p>
+                            </TooltipContent>
+                          </Tooltip>
                         )}
                         <Badge
                           variant={item.type === "lost" ? "destructive" : "default"}
@@ -299,6 +330,7 @@ const Browse = () => {
         )}
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 

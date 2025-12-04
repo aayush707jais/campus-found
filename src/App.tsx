@@ -10,6 +10,7 @@ import PostItem from "./pages/PostItem";
 import ItemDetail from "./pages/ItemDetail";
 import MyItems from "./pages/MyItems";
 import MyClaims from "./pages/MyClaims";
+import MyMatches from "./pages/MyMatches";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/item/:id" element={<ItemDetail />} />
           <Route path="/my-items" element={<MyItems />} />
           <Route path="/my-claims" element={<MyClaims />} />
+          <Route path="/my-matches" element={<MyMatches />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Package, Search, PlusCircle, LogOut, User, Shield } from "lucide-react";
+import { Package, Search, PlusCircle, LogOut, User, Shield, Sparkles } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -88,6 +88,10 @@ export const Navbar = ({
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/my-claims")}>
                     My Claims
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/my-matches")}>
+                    <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                    My Matches
                   </DropdownMenuItem>
                   {isAdmin && (
                     <>

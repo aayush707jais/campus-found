@@ -3,28 +3,33 @@ import { useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAIMatching, AIMatchResult, Item } from "@/hooks/useAIMatching";
+import { useCombinedMatching, CombinedMatchResult } from "@/hooks/useCombinedMatching";
+import { Item } from "@/hooks/useAIMatching";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, MapPin, Calendar, RefreshCw, ChevronRight, Package } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { ModelLoadingIndicator } from "@/components/ModelLoadingIndicator";
+import { Sparkles, MapPin, Calendar, RefreshCw, ChevronRight, Package, Image, Brain, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface MatchGroup {
   userItem: Item;
-  matches: (AIMatchResult & { matchedItem: Item })[];
+  matches: (CombinedMatchResult & { matchedItem: Item })[];
 }
 
 const MyMatches = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { batchMatchItems, loading: aiLoading } = useAIMatching();
+  const { combinedBatchMatch, loading: matchLoading, modelProgress, modelReady } = useCombinedMatching();
   
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [matchGroups, setMatchGroups] = useState<MatchGroup[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [matchingStage, setMatchingStage] = useState<string>("");
+  const [stageProgress, setStageProgress] = useState(0);
 
   useEffect(() => {
     const getUser = async () => {
@@ -42,8 +47,10 @@ const MyMatches = () => {
     if (!user) return;
     
     setRefreshing(true);
+    setMatchingStage("");
+    setStageProgress(0);
+    
     try {
-      // Fetch user's active items
       const { data: userItems, error: userError } = await supabase
         .from("items")
         .select("*")
@@ -58,7 +65,6 @@ const MyMatches = () => {
         return;
       }
 
-      // Fetch all other active items
       const { data: allItems, error: allError } = await supabase
         .from("items")
         .select("*")
@@ -69,7 +75,6 @@ const MyMatches = () => {
 
       const groups: MatchGroup[] = [];
 
-      // For each user item, find matches
       for (const userItem of userItems) {
         const oppositeType = userItem.type === "lost" ? "found" : "lost";
         const candidates = (allItems || []).filter(
@@ -78,12 +83,17 @@ const MyMatches = () => {
 
         if (candidates.length === 0) continue;
 
-        const matches = await batchMatchItems(userItem as Item, candidates);
+        const matches = await combinedBatchMatch(
+          userItem as Item, 
+          candidates,
+          (stage, progress) => {
+            setMatchingStage(stage);
+            setStageProgress(progress);
+          }
+        );
         
-        // Filter matches with score > 30 and sort by score
         const significantMatches = matches
-          .filter((m) => m.score > 30)
-          .sort((a, b) => b.score - a.score)
+          .filter((m) => m.combinedScore > 30)
           .map((match) => ({
             ...match,
             matchedItem: candidates.find((c) => c.id === match.matchedItemId)!,
@@ -109,8 +119,9 @@ const MyMatches = () => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setMatchingStage("");
     }
-  }, [user, batchMatchItems, toast]);
+  }, [user, combinedBatchMatch, toast]);
 
   useEffect(() => {
     if (user) {
@@ -141,6 +152,15 @@ const MyMatches = () => {
     return images[category.toLowerCase()] || images.other;
   };
 
+  const getStageLabel = (stage: string) => {
+    switch (stage) {
+      case 'image': return 'Analyzing images with ML...';
+      case 'ai': return 'Running AI context analysis...';
+      case 'combining': return 'Combining results...';
+      default: return 'Processing...';
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -148,6 +168,11 @@ const MyMatches = () => {
         <main className="container py-8">
           <div className="space-y-6">
             <Skeleton className="h-10 w-64" />
+            <ModelLoadingIndicator 
+              progress={modelProgress} 
+              isLoading={!modelReady && modelProgress > 0} 
+              modelReady={modelReady} 
+            />
             <div className="grid gap-6">
               {[1, 2].map((i) => (
                 <Skeleton key={i} className="h-64 w-full" />
@@ -167,21 +192,45 @@ const MyMatches = () => {
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-3">
               <Sparkles className="h-8 w-8 text-primary" />
-              My AI Matches
+              My AI + ML Matches
             </h1>
             <p className="text-muted-foreground mt-2">
-              AI-detected potential matches for your lost & found items
+              Combined AI reasoning + ML image analysis for best match accuracy
             </p>
           </div>
           <Button
             variant="outline"
             onClick={fetchMatches}
-            disabled={refreshing || aiLoading}
+            disabled={refreshing || matchLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
+
+        {/* Model loading indicator */}
+        {!modelReady && modelProgress > 0 && (
+          <div className="mb-6">
+            <ModelLoadingIndicator 
+              progress={modelProgress} 
+              isLoading={true} 
+              modelReady={false} 
+            />
+          </div>
+        )}
+
+        {/* Matching progress indicator */}
+        {matchingStage && (
+          <Card className="mb-6 border-primary/20">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3 mb-2">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="font-medium">{getStageLabel(matchingStage)}</span>
+              </div>
+              <Progress value={stageProgress} className="h-2" />
+            </CardContent>
+          </Card>
+        )}
 
         {matchGroups.length === 0 ? (
           <Card className="border-dashed">
@@ -190,9 +239,9 @@ const MyMatches = () => {
               <h3 className="text-xl font-semibold mb-2">No Matches Found</h3>
               <p className="text-muted-foreground text-center max-w-md">
                 {user ? (
-                  "We haven't found any AI matches for your items yet. Post more items or check back later as new items are added."
+                  "We haven't found any matches for your items yet. Post more items or check back later as new items are added."
                 ) : (
-                  "Sign in to see AI matches for your items."
+                  "Sign in to see matches for your items."
                 )}
               </p>
               <Button className="mt-6" onClick={() => navigate("/post")}>
@@ -259,13 +308,13 @@ const MyMatches = () => {
                               className="w-16 h-16 object-cover rounded-md"
                             />
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <Badge
                                   variant="outline"
-                                  className={`text-xs ${getScoreColor(match.score)}`}
+                                  className={`text-xs ${getScoreColor(match.combinedScore)}`}
                                 >
                                   <Sparkles className="h-3 w-3 mr-1" />
-                                  {match.score}%
+                                  {match.combinedScore}%
                                 </Badge>
                               </div>
                               <h5 className="font-medium text-sm truncate">
@@ -276,6 +325,19 @@ const MyMatches = () => {
                               </p>
                             </div>
                           </div>
+                          
+                          {/* Score breakdown */}
+                          <div className="flex items-center gap-3 mt-3 text-xs">
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Brain className="h-3 w-3" />
+                              <span>AI: {match.aiScore}%</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Image className="h-3 w-3" />
+                              <span>Image: {match.imageScore}%</span>
+                            </div>
+                          </div>
+                          
                           <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
                             {match.reasoning}
                           </p>

@@ -2,16 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Navbar } from "@/components/Navbar";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, Calendar, Package, Sparkles, Loader2 } from "lucide-react";
+import { Search, MapPin, Calendar, Package, Sparkles, Brain, Image } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { useAIMatching, AIMatchResult, Item } from "@/hooks/useAIMatching";
+import { useCombinedMatching, CombinedMatchResult } from "@/hooks/useCombinedMatching";
+import { Item } from "@/hooks/useAIMatching";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ModelLoadingIndicator } from "@/components/ModelLoadingIndicator";
 
 const Browse = () => {
   const [items, setItems] = useState<Item[]>([]);
@@ -21,11 +22,11 @@ const Browse = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [user, setUser] = useState<any>(null);
-  const [aiMatches, setAiMatches] = useState<Map<string, AIMatchResult>>(new Map());
-  const [loadingAI, setLoadingAI] = useState(false);
+  const [combinedMatches, setCombinedMatches] = useState<Map<string, CombinedMatchResult>>(new Map());
+  const [loadingMatches, setLoadingMatches] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { batchMatchItems } = useAIMatching();
+  const { combinedBatchMatch, modelProgress, modelReady } = useCombinedMatching();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -35,7 +36,6 @@ const Browse = () => {
         return;
       }
       setUser(session.user);
-      // Fetch user's items for matching
       fetchUserItems(session.user.id);
     };
 
@@ -89,17 +89,15 @@ const Browse = () => {
     }
   };
 
-  // Run AI matching when user items or browsed items change
-  const runAIMatching = useCallback(async () => {
+  // Run combined AI + ML matching
+  const runCombinedMatching = useCallback(async () => {
     if (userItems.length === 0 || items.length === 0 || !user) return;
 
-    // Find items that could match user's items (opposite types, not owned by user)
     const itemsToMatch = items.filter(item => item.user_id !== user.id);
     if (itemsToMatch.length === 0) return;
 
-    // For each user item, find potential matches
-    setLoadingAI(true);
-    const allMatches = new Map<string, AIMatchResult>();
+    setLoadingMatches(true);
+    const allMatches = new Map<string, CombinedMatchResult>();
 
     for (const userItem of userItems) {
       const oppositeType = userItem.type === "lost" ? "found" : "lost";
@@ -107,49 +105,41 @@ const Browse = () => {
       
       if (candidates.length > 0) {
         try {
-          const matches = await batchMatchItems(userItem, candidates);
+          const matches = await combinedBatchMatch(userItem, candidates);
           matches.forEach(m => {
             const existing = allMatches.get(m.matchedItemId);
-            // Keep the higher score if item already has a match
-            if (!existing || m.score > existing.score) {
+            if (!existing || m.combinedScore > existing.combinedScore) {
               allMatches.set(m.matchedItemId, m);
             }
           });
         } catch (err) {
-          console.error("AI matching error:", err);
+          console.error("Combined matching error:", err);
         }
       }
     }
 
-    setAiMatches(allMatches);
-    setLoadingAI(false);
+    setCombinedMatches(allMatches);
+    setLoadingMatches(false);
 
     if (allMatches.size > 0) {
       toast({
-        title: "AI Matches Found",
+        title: "AI + ML Matches Found",
         description: `Found ${allMatches.size} potential match${allMatches.size > 1 ? "es" : ""} with your items!`,
       });
     }
-  }, [userItems, items, user, batchMatchItems, toast]);
+  }, [userItems, items, user, combinedBatchMatch, toast]);
 
   useEffect(() => {
     if (userItems.length > 0 && items.length > 0 && user) {
-      // Delay slightly to avoid running on every render
       const timeout = setTimeout(() => {
-        runAIMatching();
+        runCombinedMatching();
       }, 1000);
       return () => clearTimeout(timeout);
     }
   }, [userItems.length, items.length, user?.id]);
 
-
   const getMatchInfo = (item: Item) => {
-    // Return AI match if available
-    const aiMatch = aiMatches.get(item.id);
-    if (aiMatch) {
-      return aiMatch;
-    }
-    return null;
+    return combinedMatches.get(item.id) || null;
   };
 
   const filteredItems = items.filter((item) => {
@@ -164,11 +154,11 @@ const Browse = () => {
     return matchesSearch && matchesType && matchesCategory;
   });
 
-  // Sort by AI match score (highest first)
+  // Sort by combined match score (highest first)
   const sortedItems = [...filteredItems].sort((a, b) => {
-    const matchA = aiMatches.get(a.id);
-    const matchB = aiMatches.get(b.id);
-    if (matchA && matchB) return matchB.score - matchA.score;
+    const matchA = combinedMatches.get(a.id);
+    const matchB = combinedMatches.get(b.id);
+    if (matchA && matchB) return matchB.combinedScore - matchA.combinedScore;
     if (matchA) return -1;
     if (matchB) return 1;
     return 0;
@@ -189,17 +179,28 @@ const Browse = () => {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
               Browse Items
             </h1>
-            {loadingAI && (
+            {loadingMatches && (
               <Badge variant="outline" className="gap-1">
                 <Sparkles className="h-3 w-3 animate-pulse" />
-                AI Matching...
+                AI + ML Matching...
               </Badge>
             )}
           </div>
           <p className="text-muted-foreground">
-            Search through lost and found items on campus. AI matches are highlighted.
+            Search through lost and found items. AI + ML matches highlighted with score breakdown.
           </p>
         </div>
+
+        {/* Model loading indicator */}
+        {!modelReady && modelProgress > 0 && (
+          <div className="mb-6">
+            <ModelLoadingIndicator 
+              progress={modelProgress} 
+              isLoading={true} 
+              modelReady={false} 
+            />
+          </div>
+        )}
 
         <div className="grid gap-4 md:grid-cols-4 mb-8">
           <div className="md:col-span-2 relative">
@@ -291,12 +292,22 @@ const Browse = () => {
                             <TooltipTrigger asChild>
                               <Badge className="bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-100 dark:border-green-700 cursor-help gap-1">
                                 <Sparkles className="h-3 w-3" />
-                                {Math.round(matchInfo.score)}% AI Match
+                                {Math.round(matchInfo.combinedScore)}%
                               </Badge>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
-                              <p className="font-medium">AI Reasoning:</p>
-                              <p className="text-sm">{matchInfo.reasoning}</p>
+                              <div className="space-y-2">
+                                <p className="font-medium">Score Breakdown:</p>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Brain className="h-3 w-3" />
+                                  <span>AI Context: {matchInfo.aiScore}%</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Image className="h-3 w-3" />
+                                  <span>ML Image: {matchInfo.imageScore}%</span>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-2">{matchInfo.reasoning}</p>
+                              </div>
                             </TooltipContent>
                           </Tooltip>
                         )}

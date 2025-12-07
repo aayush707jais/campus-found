@@ -21,6 +21,10 @@ export interface Item {
   user_id: string;
 }
 
+// Track rate limit state across hook instances
+let isRateLimited = false;
+let rateLimitResetTime = 0;
+
 export function useAIMatching() {
   const [loading, setLoading] = useState(false);
   const [matchScores, setMatchScores] = useState<Map<string, AIMatchResult>>(new Map());
@@ -28,6 +32,12 @@ export function useAIMatching() {
   const { toast } = useToast();
 
   const findMatchesForItem = useCallback(async (item: Item): Promise<AIMatchResult[]> => {
+    // Skip if currently rate limited
+    if (isRateLimited && Date.now() < rateLimitResetTime) {
+      console.log("Skipping AI call - rate limited");
+      return [];
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-match-items", {
@@ -36,6 +46,9 @@ export function useAIMatching() {
 
       if (error) {
         console.error("AI matching error:", error);
+        // Set rate limit flag for 2 minutes
+        isRateLimited = true;
+        rateLimitResetTime = Date.now() + 120000;
         toast({
           title: "AI Matching Error",
           description: error.message || "Failed to find AI matches",
@@ -43,6 +56,9 @@ export function useAIMatching() {
         });
         return [];
       }
+
+      // Reset rate limit on success
+      isRateLimited = false;
 
       const matches = data?.matches || [];
       
@@ -75,6 +91,12 @@ export function useAIMatching() {
   ): Promise<AIMatchResult[]> => {
     if (candidateItems.length === 0) return [];
     
+    // Skip if currently rate limited - don't make more calls
+    if (isRateLimited && Date.now() < rateLimitResetTime) {
+      console.log("Skipping AI batch call - rate limited, using ML only");
+      return [];
+    }
+    
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-match-items", {
@@ -87,12 +109,16 @@ export function useAIMatching() {
 
       if (error) {
         console.error("Batch matching error:", error);
+        // Set rate limit flag for 2 minutes to avoid repeated calls
+        isRateLimited = true;
+        rateLimitResetTime = Date.now() + 120000;
+        
         // Show toast only once per session to avoid spam
         if (!hasShownError) {
           setHasShownError(true);
           toast({
             title: "AI matching unavailable",
-            description: "Using ML image matching only. AI will retry automatically.",
+            description: "Using ML image matching only. AI will retry in 2 minutes.",
             variant: "destructive",
           });
         }
@@ -102,16 +128,22 @@ export function useAIMatching() {
       // Check if data contains an error (edge function returned error body)
       if (data?.error) {
         console.error("AI service error:", data.error);
+        isRateLimited = true;
+        rateLimitResetTime = Date.now() + 120000;
+        
         if (!hasShownError) {
           setHasShownError(true);
           toast({
             title: "AI matching unavailable",
-            description: "Using ML image matching only. AI will retry automatically.",
+            description: "Using ML image matching only. AI will retry in 2 minutes.",
             variant: "destructive",
           });
         }
         return [];
       }
+
+      // Reset rate limit on success
+      isRateLimited = false;
 
       const matches = data?.matches || [];
       
@@ -130,7 +162,7 @@ export function useAIMatching() {
     } finally {
       setLoading(false);
     }
-  }, [matchScores, toast]);
+  }, [matchScores, toast, hasShownError]);
 
   const getMatchScore = useCallback(async (
     item1: Item,

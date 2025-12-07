@@ -15,6 +15,9 @@ export interface CombinedMatchResult {
 const AI_WEIGHT = 0.6;
 const IMAGE_WEIGHT = 0.4;
 
+// Toggle to disable AI matching temporarily (set to true to skip AI calls)
+const AI_MATCHING_DISABLED = true;
+
 export function useCombinedMatching() {
   const [loading, setLoading] = useState(false);
   const { batchMatchItems, loading: aiLoading } = useAIMatching();
@@ -47,14 +50,18 @@ export function useCombinedMatching() {
       const mlScoreMap = new Map<string, number>();
       mlResults.forEach(r => mlScoreMap.set(r.matchedItemId, r.imageSimilarity));
       
-      // Stage 2: Run AI context matching (gracefully handle failures)
+      // Stage 2: Run AI context matching (skip if disabled)
       onProgress?.('ai', 0);
       let aiResults: AIMatchResult[] = [];
-      try {
-        aiResults = await batchMatchItems(targetItem, candidates);
-      } catch (aiError) {
-        console.warn('AI matching failed, using ML results only:', aiError);
-        // Continue with ML-only results
+      
+      if (!AI_MATCHING_DISABLED) {
+        try {
+          aiResults = await batchMatchItems(targetItem, candidates);
+        } catch (aiError) {
+          console.warn('AI matching failed, using ML results only:', aiError);
+        }
+      } else {
+        console.log('AI matching disabled - using ML only');
       }
       
       // Create map for AI scores

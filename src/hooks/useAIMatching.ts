@@ -24,6 +24,7 @@ export interface Item {
 export function useAIMatching() {
   const [loading, setLoading] = useState(false);
   const [matchScores, setMatchScores] = useState<Map<string, AIMatchResult>>(new Map());
+  const [hasShownError, setHasShownError] = useState(false);
   const { toast } = useToast();
 
   const findMatchesForItem = useCallback(async (item: Item): Promise<AIMatchResult[]> => {
@@ -86,24 +87,26 @@ export function useAIMatching() {
 
       if (error) {
         console.error("Batch matching error:", error);
-        // Check for rate limit error
-        if (error.message?.includes("Rate limit") || error.message?.includes("429")) {
+        // Show toast only once per session to avoid spam
+        if (!hasShownError) {
+          setHasShownError(true);
           toast({
-            title: "Rate limit reached",
-            description: "AI matching is temporarily unavailable. ML image matching will still work.",
+            title: "AI matching unavailable",
+            description: "Using ML image matching only. AI will retry automatically.",
             variant: "destructive",
           });
         }
         return [];
       }
 
-      // Check if data contains an error (edge function returned 500 with error body)
+      // Check if data contains an error (edge function returned error body)
       if (data?.error) {
         console.error("AI service error:", data.error);
-        if (data.error.includes("Rate limit")) {
+        if (!hasShownError) {
+          setHasShownError(true);
           toast({
-            title: "Rate limit reached",
-            description: "AI matching is temporarily unavailable. ML image matching will still work.",
+            title: "AI matching unavailable",
+            description: "Using ML image matching only. AI will retry automatically.",
             variant: "destructive",
           });
         }
@@ -122,6 +125,7 @@ export function useAIMatching() {
       return matches;
     } catch (err) {
       console.error("Error in batch matching:", err);
+      // Silently fail - ML matching will still work
       return [];
     } finally {
       setLoading(false);

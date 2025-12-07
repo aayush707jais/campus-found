@@ -47,9 +47,15 @@ export function useCombinedMatching() {
       const mlScoreMap = new Map<string, number>();
       mlResults.forEach(r => mlScoreMap.set(r.matchedItemId, r.imageSimilarity));
       
-      // Stage 2: Run AI context matching
+      // Stage 2: Run AI context matching (gracefully handle failures)
       onProgress?.('ai', 0);
-      const aiResults = await batchMatchItems(targetItem, candidates);
+      let aiResults: AIMatchResult[] = [];
+      try {
+        aiResults = await batchMatchItems(targetItem, candidates);
+      } catch (aiError) {
+        console.warn('AI matching failed, using ML results only:', aiError);
+        // Continue with ML-only results
+      }
       
       // Create map for AI scores
       const aiScoreMap = new Map<string, AIMatchResult>();

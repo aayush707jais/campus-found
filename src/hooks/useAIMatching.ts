@@ -24,6 +24,7 @@ export interface Item {
 // Track rate limit state across hook instances
 let isRateLimited = false;
 let rateLimitResetTime = 0;
+let pendingRequest = false; // Prevent concurrent requests
 
 export function useAIMatching() {
   const [loading, setLoading] = useState(false);
@@ -96,7 +97,14 @@ export function useAIMatching() {
       console.log("Skipping AI batch call - rate limited, using ML only");
       return [];
     }
+
+    // Skip if another request is already in flight (prevents duplicate calls)
+    if (pendingRequest) {
+      console.log("Skipping AI batch call - request already in flight");
+      return [];
+    }
     
+    pendingRequest = true;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("ai-match-items", {
@@ -160,6 +168,7 @@ export function useAIMatching() {
       // Silently fail - ML matching will still work
       return [];
     } finally {
+      pendingRequest = false;
       setLoading(false);
     }
   }, [matchScores, toast, hasShownError]);

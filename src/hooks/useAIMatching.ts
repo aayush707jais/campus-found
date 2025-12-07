@@ -86,6 +86,27 @@ export function useAIMatching() {
 
       if (error) {
         console.error("Batch matching error:", error);
+        // Check for rate limit error
+        if (error.message?.includes("Rate limit") || error.message?.includes("429")) {
+          toast({
+            title: "Rate limit reached",
+            description: "AI matching is temporarily unavailable. ML image matching will still work.",
+            variant: "destructive",
+          });
+        }
+        return [];
+      }
+
+      // Check if data contains an error (edge function returned 500 with error body)
+      if (data?.error) {
+        console.error("AI service error:", data.error);
+        if (data.error.includes("Rate limit")) {
+          toast({
+            title: "Rate limit reached",
+            description: "AI matching is temporarily unavailable. ML image matching will still work.",
+            variant: "destructive",
+          });
+        }
         return [];
       }
 
@@ -105,7 +126,7 @@ export function useAIMatching() {
     } finally {
       setLoading(false);
     }
-  }, [matchScores]);
+  }, [matchScores, toast]);
 
   const getMatchScore = useCallback(async (
     item1: Item,
